@@ -664,6 +664,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d9bd4339068940440a38e7cf1ca73834, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  maxOrbs: 10
+  spawnInterval: 3
+  spawnAreaX: 12
+  spawnAreaZ: 12
+  orbY: 0.5
+  orbVisualPrefab: {fileID: 0}
 --- !u!1 &1652856507
 GameObject:
   m_ObjectHideFlags: 0
