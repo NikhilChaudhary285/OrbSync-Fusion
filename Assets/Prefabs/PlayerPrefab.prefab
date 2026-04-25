@@ -126,7 +126,8 @@ MonoBehaviour:
   ObjectInterest: 1
   Flags: 262145
   NestedObjects: []
-  NetworkedBehaviours: []
+  NetworkedBehaviours:
+  - {fileID: 1940908240786290637}
   ForceRemoteRenderTimeframe: 0
 --- !u!114 &1940908240786290637
 MonoBehaviour:
@@ -140,6 +141,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c230975c51550e64bb92258ac14caed9, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _Score: 0
+  _Position: {x: 0, y: 0, z: 0}
+  moveSpeed: 5
 --- !u!143 &2544487082326845743
 CharacterController:
   m_ObjectHideFlags: 0

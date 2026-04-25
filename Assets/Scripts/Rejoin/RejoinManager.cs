@@ -10,4 +10,6 @@ public class RejoinManager : MonoBehaviour
     }
 
     public void StartRejoinTimer(PlayerRef player) { }
+
+    public void SavePlayerData(PlayerRef player, PlayerSaveData data) { }
 }
