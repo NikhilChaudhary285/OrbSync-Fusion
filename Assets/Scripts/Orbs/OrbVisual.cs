@@ -19,16 +19,29 @@ public class OrbVisual : MonoBehaviour
         _manager = manager;
     }
 
+    // OnMouseDown works with 3D colliders when Camera has no UI overlay
     private void OnMouseDown()
+    {
+        TryCollect();
+    }
+
+    public void TryCollect()
     {
         // Guard: prevent multiple clicks before RPC resolves
         if (_isBeingCollected) return;
 
+        // Extra safety: check runner exists (handles click + leave edge case)
+        var runner = NetworkManager.Runner;
+        if (runner == null || !runner.IsRunning)
+        {
+            Debug.LogWarning("[OrbVisual] Runner not available — ignoring click");
+            return;
+        }
+
         _isBeingCollected = true;
 
         // Send collect RPC — all clients will validate
-        OrbRpcRelay.Instance.RPC_CollectOrb(_orbId, NetworkManager.Runner.LocalPlayer);
-
-        Debug.Log($"[OrbVisual] Clicked orb {_orbId}");
+        OrbRpcRelay.Instance.RPC_CollectOrb(_orbId, runner.LocalPlayer);
+        Debug.Log($"[OrbVisual] Clicked orb and Sent collect RPC for orb {_orbId}");
     }
 }
