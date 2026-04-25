@@ -34,6 +34,8 @@ public class GameManager : MonoBehaviour
     {
         // Start networking immediately when game launches
         NetworkManager.StartGame(defaultRoomName);
+        // OrbManager.Initialize is called from OnLocalPlayerJoined 
+        // after runner is confirmed connected
     }
 
     /// <summary>
@@ -41,6 +43,9 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void OnLocalPlayerJoined(PlayerRef player)
     {
+        // Initialize orb system once connected (host check is inside)
+        OrbManager.Initialize(NetworkManager.Runner);
+
         // Check if this is a rejoin
         if (RejoinManager.TryGetSavedData(player, out PlayerSaveData savedData))
         {
