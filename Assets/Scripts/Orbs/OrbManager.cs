@@ -98,31 +98,37 @@ public class OrbManager : MonoBehaviour
         _activeOrbs[orbId] = visual;
     }
 
-    // ─── Called on ALL clients when orb collect RPC arrives ───────────────
-
+    // ─── Called on ALL clients when orb collect RPC arrives ───────────────   
     public void OnOrbCollectReceived(int orbId, PlayerRef collector)
     {
-        // Guard: prevent double-collection
+        // ── Validation layer ──────────────────────────────────────────────────
+
+        // Rule 1: Already claimed? Ignore (handles race conditions)
         if (_claimedOrbIds.Contains(orbId))
         {
-            Debug.LogWarning($"[OrbManager] Orb {orbId} already claimed — ignoring duplicate RPC");
+            Debug.LogWarning($"[OrbManager] REJECTED — orb {orbId} already claimed");
             return;
         }
 
+        // Rule 2: Orb doesn't exist on this client? Could be late RPC — still record claim
+        bool hadVisual = _activeOrbs.ContainsKey(orbId);
+
+        // ── Claim the orb ─────────────────────────────────────────────────────
         _claimedOrbIds.Add(orbId);
 
-        // Destroy the visual if it exists on this client
-        if (_activeOrbs.TryGetValue(orbId, out var visual))
+        if (hadVisual)
         {
+            Destroy(_activeOrbs[orbId].gameObject);
             _activeOrbs.Remove(orbId);
-            Destroy(visual.gameObject);
         }
 
-        // Award score only to the local player if they are the collector
-        if (collector == NetworkManager.Runner.LocalPlayer)
+        // ── Award score ───────────────────────────────────────────────────────
+        // Only award to the local player if they are the collector
+        var runner = NetworkManager.Runner;
+        if (runner != null && collector == runner.LocalPlayer)
         {
             PlayerStateManager.Instance.AddScore(1);
-            Debug.Log($"[OrbManager] Local player collected orb {orbId} — score +1");
+            Debug.Log($"[OrbManager] Score awarded to local player — orb {orbId} collected by local player — score +1");
         }
     }
 
