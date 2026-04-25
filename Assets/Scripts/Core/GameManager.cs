@@ -63,7 +63,7 @@ public class GameManager : MonoBehaviour
         // NOTE: Orb state sync for late joiners is handled differently.
         // In Shared Mode, the host will broadcast active orbs via RPC on join.
         // See OrbManager.SyncStateToPlayer — call this from the host side.
-        OrbManager.SyncStateToPlayer(player);
+        
     }
 
     /// <summary>

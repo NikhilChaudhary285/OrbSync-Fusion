@@ -58,6 +58,13 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
             // Ask GameManager to handle spawn + possible rejoin restore
             GameManager.Instance.OnLocalPlayerJoined(player);
         }
+
+        // HOST handles orb sync for new player
+        if (runner.IsSharedModeMasterClient)
+        {
+            GameManager.Instance.OrbManager.SyncStateToPlayer(player);
+            Debug.Log($"[NetworkManager] Host syncing orbs to player {player}");
+        }
     }
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
