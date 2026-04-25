@@ -733,7 +733,8 @@ MonoBehaviour:
   spawnAreaX: 12
   spawnAreaZ: 12
   orbY: 0.5
-  orbVisualPrefab: {fileID: 0}
+  orbVisualPrefab: {fileID: 9089134027873080517, guid: a3c87cedda2d3ed4f96320181c0ab966,
+    type: 3}
 --- !u!1 &1652856507
 GameObject:
   m_ObjectHideFlags: 0
