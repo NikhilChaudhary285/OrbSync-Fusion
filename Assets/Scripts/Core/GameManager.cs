@@ -51,7 +51,7 @@ public class GameManager : MonoBehaviour
         {
             // Rejoin path: restore position and score
             PlayerStateManager.SpawnAndRestorePlayer(player, savedData);
-            Debug.Log($"[GameManager] Player {player} REJOINED — restoring data");
+            Debug.Log($"[GameManager] Player {player} REJOINED — restoring data: score={savedData.Score}");
         }
         else
         {
@@ -59,6 +59,11 @@ public class GameManager : MonoBehaviour
             PlayerStateManager.SpawnFreshPlayer(player);
             Debug.Log($"[GameManager] Player {player} joined fresh");
         }
+
+        // NOTE: Orb state sync for late joiners is handled differently.
+        // In Shared Mode, the host will broadcast active orbs via RPC on join.
+        // See OrbManager.SyncStateToPlayer — call this from the host side.
+        OrbManager.SyncStateToPlayer(player);
     }
 
     /// <summary>
