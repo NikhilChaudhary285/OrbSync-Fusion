@@ -18,6 +18,8 @@ public class GameManager : MonoBehaviour
     [Header("Settings")]
     [SerializeField] private string defaultRoomName = "OrbRoom01";
 
+    public static bool VerboseLogs = true; // Set false before submission
+
     private void Awake()
     {
         // Singleton setup
@@ -44,6 +46,12 @@ public class GameManager : MonoBehaviour
 
         // OrbManager.Initialize is called from OnLocalPlayerJoined 
         // after runner is confirmed connected
+
+        // Add a debug HUD -> For Centralized log levels
+        if (VerboseLogs && GetComponent<DebugHUD>() == null)
+        {
+            gameObject.AddComponent<DebugHUD>();
+        }
     }
 
     /// <summary>

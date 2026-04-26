@@ -190,7 +190,7 @@ MonoBehaviour:
   gravity: -20
   jumpImpulse: 8
   acceleration: 20
-  braking: 0.2
+  braking: 5
   maxSpeed: 5
   rotationSpeed: 15
 --- !u!114 &3520774699216956900
