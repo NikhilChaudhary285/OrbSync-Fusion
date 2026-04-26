@@ -1,16 +1,18 @@
-using UnityEngine;
+Ôªøusing UnityEngine;
 using Fusion;
 
 /// <summary>
-/// Data saved when a player disconnects ó used for rejoin restoration.
+/// Data saved when a player disconnects ‚Äî used for rejoin restoration.
 /// </summary>
+// In DataStructures.cs ‚Äî update PlayerSaveData:
 [System.Serializable]
 public struct PlayerSaveData
 {
     public int Score;
     public Vector3 Position;
-    public float TimeSaved;     // Time.time when saved ó used to check 30s window
-    public bool IsValid;       // False = no data saved (fresh join)
+    public float TimeSaved;
+    public bool IsValid;
+    public string UserId;    // ‚Üê ADD THIS: stable identity across reconnects
 }
 
 /// <summary>
@@ -19,7 +21,7 @@ public struct PlayerSaveData
 [System.Serializable]
 public struct OrbData
 {
-    public int OrbId;        // Unique ID ó prevents duplicates
+    public int OrbId;        // Unique ID ‚Äî prevents duplicates
     public Vector3 Position;
     public bool IsClaimed;    // True = orb has been collected
 }

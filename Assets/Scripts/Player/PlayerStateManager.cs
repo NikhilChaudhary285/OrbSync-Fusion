@@ -69,14 +69,32 @@ public class PlayerStateManager : MonoBehaviour
             Debug.Log($"[PlayerStateManager] Spawn succeeded: {obj.name}");
     }
 
+    // In PlayerStateManager.cs — replace SpawnAndRestorePlayer:
     public void SpawnAndRestorePlayer(PlayerRef player, PlayerSaveData savedData)
     {
         var runner = NetworkManager.Runner;
         if (runner == null || playerPrefab == null) return;
 
-        runner.Spawn(playerPrefab, savedData.Position, Quaternion.identity, player);
-        StartCoroutine(RestoreScoreDelayed(player, savedData.Score));
-        Debug.Log($"[PlayerStateManager] Restored player {player} — score:{savedData.Score} pos:{savedData.Position}");
+        runner.Spawn(
+            playerPrefab,
+            savedData.Position,
+            Quaternion.identity,
+            player,
+            (spawnRunner, obj) =>
+            {
+                // OnBeforeSpawned — fires synchronously before Spawned()
+                // Safe to set initial values here
+                var np = obj.GetComponent<NetworkedPlayer>();
+                if (np != null)
+                {
+                    // Queue the score restore — will apply in Spawned()
+                    np.PendingScoreRestore = savedData.Score;
+                    Debug.Log($"[PlayerStateManager] Set PendingScoreRestore={savedData.Score} for {player}");
+                }
+            }
+        );
+
+        Debug.Log($"[PlayerStateManager] Spawning restored player {player} at {savedData.Position}");
     }
 
     private IEnumerator RestoreScoreDelayed(PlayerRef player, int score)
@@ -91,15 +109,10 @@ public class PlayerStateManager : MonoBehaviour
     {
         var runner = NetworkManager.Runner;
         if (runner == null) return;
-
         if (_players.TryGetValue(runner.LocalPlayer, out var np))
         {
-            np.Score += amount;
-            Debug.Log($"[PlayerStateManager] Score +{amount} → now {np.Score}");
-        }
-        else
-        {
-            Debug.LogWarning("[PlayerStateManager] AddScore called but local player not registered yet");
+            np.SetScore(np.CachedScore + amount);
+            Debug.Log($"[PlayerStateManager] Score +{amount} → now {np.CachedScore}");
         }
     }
 
@@ -110,17 +123,25 @@ public class PlayerStateManager : MonoBehaviour
     {
         if (!_players.TryGetValue(player, out var np)) return;
 
+        // Get stable UserId BEFORE the object is despawned
+        // np.StableUserId is a [Networked] string — read it while object still exists
+        string userId = np.StableUserId.ToString();
+        if (string.IsNullOrEmpty(userId))
+            userId = player.ToString(); // fallback
+
         var data = new PlayerSaveData
         {
-            Score = np.Score,
+            Score = np.CachedScore,
             Position = np.transform.position,
             TimeSaved = Time.time,
-            IsValid = true
+            IsValid = true,
+            UserId = userId
         };
 
-        GameManager.Instance.RejoinManager.SavePlayerData(player, data);
+        GameManager.Instance.RejoinManager.SavePlayerData(userId, data);
+        GameManager.Instance.RejoinManager.StartRejoinTimer(userId); // ← start timer here
         _players.Remove(player);
-        Debug.Log($"[PlayerStateManager] Saved and unregistered player {player}");
+        Debug.Log($"[PlayerStateManager] Saved player {player} userId:{userId} — score:{data.Score}");
     }
 
     private Vector3 GetNextSpawnPoint(PlayerRef player)

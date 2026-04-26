@@ -17,13 +17,21 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
     public async void StartGame(string roomName)
     {
         var runnerGO = new GameObject("NetworkRunner");
-        DontDestroyOnLoad(runnerGO); // Keep runner alive across scenes
+        DontDestroyOnLoad(runnerGO);
 
         Runner = runnerGO.AddComponent<NetworkRunner>();
         Runner.ProvideInput = true;
-
-        // IMPORTANT: Add THIS monobehaviour as the callback listener
         Runner.AddCallbacks(this);
+
+        // ── Set stable UserId BEFORE StartGame ────────────────────────────
+        // SystemInfo.deviceUniqueIdentifier is stable across play sessions
+        // on the same machine. This is what RejoinManager uses as the key.
+        var authValues = new Fusion.Photon.Realtime.AuthenticationValues();
+        authValues.UserId = SystemInfo.deviceUniqueIdentifier;
+        // Note: In a shipped game you'd use a real account ID here.
+        // For this assignment, device ID is sufficient and stable.
+
+        Debug.Log($"[NetworkManager] Using stable UserId: {authValues.UserId}");
 
         var result = await Runner.StartGame(new StartGameArgs
         {
@@ -31,7 +39,8 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
             SessionName = roomName,
             Scene = SceneRef.FromIndex(0),
             SceneManager = runnerGO.AddComponent<NetworkSceneManagerDefault>(),
-            PlayerCount = 4
+            PlayerCount = 4,
+            AuthValues = authValues   // ← pass stable auth values
         });
 
         if (result.Ok)
@@ -89,6 +98,17 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
         input.Set(playerInput);
     }
     public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
+    private void OnApplicationQuit()
+    {
+        // When THIS client quits, save our own data immediately
+        // OnPlayerLeft won't fire for the local player on the same machine
+        if (Runner != null && Runner.IsRunning)
+        {
+            var localPlayer = Runner.LocalPlayer;
+            Debug.Log($"[NetworkManager] ApplicationQuit — saving local player {localPlayer}");
+            GameManager.Instance?.OnPlayerLeft(localPlayer);
+        }
+    }
     public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
     {
         Debug.Log($"[NetworkManager] Shutdown: {shutdownReason}");

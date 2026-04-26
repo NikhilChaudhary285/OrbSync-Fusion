@@ -21,36 +21,54 @@ public class NetworkedPlayer : NetworkBehaviour
     // Used for smooth visual interpolation on remote clients
     private NetworkCharacterController _ncc;
 
+    // In NetworkedPlayer.cs — adding this field
+    public int CachedScore { get; private set; }  // plain C# — always safe to read
+
+    // Update FixedUpdateNetwork or wherever score changes to keep it in sync:
+    // Adding this inside Spawned() and whenever Score changes:
+    // In NetworkedPlayer.cs — adding this networked property:
+    [Networked] public NetworkString<_64> StableUserId { get; set; } // In Spawned() — set it for the local player only:
+    // In NetworkedPlayer.cs — add field:
+    public int PendingScoreRestore = -1; // -1 means no restore pending // In Spawned() — apply it after registering:
     public override void Spawned()
     {
-        // Try to get NetworkCharacterController (preferred over plain CC)
         _ncc = GetComponent<NetworkCharacterController>();
+        CachedScore = Score;
 
-        // Register with PlayerStateManager
         PlayerStateManager.Instance.RegisterPlayer(Object.InputAuthority, this);
 
-        // CRITICAL: Tell the runner this object belongs to this player
-        // Without this, Local PlayerObject stays None in the inspector
-        // and Fusion can't route inputs correctly
         if (HasInputAuthority)
         {
             Runner.SetPlayerObject(Runner.LocalPlayer, Object);
-            Debug.Log($"[NetworkedPlayer] Set as local player object for {Runner.LocalPlayer}");
+
+            var userId = Runner.AuthenticationValues?.UserId;
+            StableUserId = !string.IsNullOrEmpty(userId) ? userId : Runner.LocalPlayer.ToString();
+
+            // Apply pending score restore if set
+            if (PendingScoreRestore >= 0)
+            {
+                SetScore(PendingScoreRestore);
+                Debug.Log($"[NetworkedPlayer] Score restored to {PendingScoreRestore}");
+                PendingScoreRestore = -1;
+            }
         }
 
-        Debug.Log($"[NetworkedPlayer] Spawned for player {Object.InputAuthority} " +
-                  $"| HasInputAuthority: {HasInputAuthority} " +
-                  $"| HasStateAuthority: {HasStateAuthority}");
+        Debug.Log($"[NetworkedPlayer] Spawned for player {Object.InputAuthority} | HasInputAuthority: {HasInputAuthority} | HasStateAuthority: {HasStateAuthority}");
 
-        // Color each player differently so we can see them as separate objects
         var renderer = GetComponentInChildren<Renderer>();
         if (renderer != null)
         {
-            // Use InputAuthority's raw value to pick a color
             Color[] colors = { Color.blue, Color.red, Color.green, Color.magenta };
             int idx = Object.InputAuthority.RawEncoded % colors.Length;
             renderer.material.color = colors[idx];
         }
+    }
+
+    // Add this method — called by PlayerStateManager.AddScore:
+    public void SetScore(int newScore)
+    {
+        Score = newScore;
+        CachedScore = newScore;  // keep cache in sync
     }
 
     public override void FixedUpdateNetwork()

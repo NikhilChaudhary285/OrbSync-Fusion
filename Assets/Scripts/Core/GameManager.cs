@@ -62,12 +62,19 @@ public class GameManager : MonoBehaviour
         // Initialize orb system once connected (host check is inside)
         OrbManager.Initialize(NetworkManager.Runner);
 
+        // Get our stable UserId to check for saved data
+        string userId = NetworkManager.Runner.AuthenticationValues?.UserId;
+        if (string.IsNullOrEmpty(userId))
+            userId = player.ToString();
+
+        Debug.Log($"[GameManager] OnLocalPlayerJoined — player:{player} userId:{userId}");
+
         // Check if this is a rejoin
-        if (RejoinManager.TryGetSavedData(player, out PlayerSaveData savedData))
+        if (RejoinManager.TryGetSavedData(userId, out PlayerSaveData savedData))
         {
             // Rejoin path: restore position and score
             PlayerStateManager.SpawnAndRestorePlayer(player, savedData);
-            Debug.Log($"[GameManager] Player {player} REJOINED — restoring data: score={savedData.Score}");
+            Debug.Log($"[GameManager] Player {player} REJOINED — score:{savedData.Score} pos:{savedData.Position}");
         }
         else
         {
@@ -79,7 +86,6 @@ public class GameManager : MonoBehaviour
         // NOTE: Orb state sync for late joiners is handled differently.
         // In Shared Mode, the host will broadcast active orbs via RPC on join.
         // See OrbManager.SyncStateToPlayer — call this from the host side - In NetworkManager.cs - OnPlayerJoined() Method
-
     }
 
     /// <summary>
@@ -88,9 +94,9 @@ public class GameManager : MonoBehaviour
     public void OnPlayerLeft(PlayerRef player)
     {
         // Save their state for possible rejoin
+        Debug.Log($"[GameManager] OnPlayerLeft called for {player}");
         PlayerStateManager.SavePlayerData(player);
-
-        // Start the 30-second rejoin timer
-        RejoinManager.StartRejoinTimer(player);
+        // Note: SavePlayerData now calls RejoinManager.SavePlayerData 
+        // AND RejoinManager.StartRejoinTimer internally
     }
 }
