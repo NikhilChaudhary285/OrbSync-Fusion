@@ -76,9 +76,9 @@ GameManager              — Central coordinator, holds all manager references
 
 **Key design decisions:**
 
-* Orbs are **not** spawned via Fusion's `runner.Spawn`. They are spawned locally on every client via **RPC broadcast** (`RPC\\\\\\\_SpawnOrb`), keeping them lightweight and free of state authority conflicts.
+* Orbs are **not** spawned via Fusion's `runner.Spawn`. They are spawned locally on every client via **RPC broadcast** (`RPC\\\\\\\\\\\\\\\_SpawnOrb`), keeping them lightweight and free of state authority conflicts.
 * Orb collection uses a **request → host arbitration → confirm** RPC chain to prevent double-collection when two players click simultaneously.
-* Score is stored as a `\\\\\\\[Networked]` property on `NetworkedPlayer` and also mirrored into a plain C# field (`CachedScore`) so it remains readable during the Fusion despawn phase when networked properties become inaccessible.
+* Score is stored as a `\\\\\\\\\\\\\\\[Networked]` property on `NetworkedPlayer` and also mirrored into a plain C# field (`CachedScore`) so it remains readable during the Fusion despawn phase when networked properties become inaccessible.
 
 \---
 
@@ -112,7 +112,7 @@ GameManager              — Central coordinator, holds all manager references
 
 ### 🔑 Player Identity — Why We Use `deviceUniqueIdentifier`
 
-In **Photon Fusion Shared Mode**, `PlayerRef` (the player slot number) is **not guaranteed to be stable across reconnects**. A player who was `\\\\\\\[Player:2]` before disconnecting may come back as `\\\\\\\[Player:3]`. Keying rejoin data on `PlayerRef` will always cause a lookup miss.
+In **Photon Fusion Shared Mode**, `PlayerRef` (the player slot number) is **not guaranteed to be stable across reconnects**. A player who was `\\\\\\\\\\\\\\\[Player:2]` before disconnecting may come back as `\\\\\\\\\\\\\\\[Player:3]`. Keying rejoin data on `PlayerRef` will always cause a lookup miss.
 
 **The solution:** each device is assigned a stable, persistent UID at connection time:
 
@@ -146,7 +146,7 @@ Because identity is tied to `SystemInfo.deviceUniqueIdentifier`:
 
 ### 📦 Orb Spawning via RPC (Not Fusion Spawn)
 
-Orbs are **not** Fusion `NetworkObject`s. Each client instantiates its own local orb `GameObject` when it receives `RPC\\\\\\\_SpawnOrb`. The host maintains the authoritative list of active orbs and replays this list to any player who joins or rejoins mid-session via `OrbManager.SyncStateToPlayer`. Already-collected orbs are not replayed — so rejoining players never see ghost orbs.
+Orbs are **not** Fusion `NetworkObject`s. Each client instantiates its own local orb `GameObject` when it receives `RPC\\\\\\\\\\\\\\\_SpawnOrb`. The host maintains the authoritative list of active orbs and replays this list to any player who joins or rejoins mid-session via `OrbManager.SyncStateToPlayer`. Already-collected orbs are not replayed — so rejoining players never see ghost orbs.
 
 ### 🏠 Host Responsibility
 
@@ -219,7 +219,7 @@ The first player to join the room acts as the host. The host runs the orb spawn 
 
 ### Windows
 
-1. Download `OrbClickGameFusion\\\\\\\_Builds\\\\\\\_04272026.zip`
+1. Download `OrbClickGameFusion\\\\\\\\\\\\\\\_Builds\\\\\\\\\\\\\\\_04272026.zip`
 2. Extract the Windows folder
 3. Run `OrbClickGame.exe`
 4. Game auto-connects to room `OrbRoom01`
@@ -235,7 +235,7 @@ The first player to join the room acts as the host. The host runs the orb spawn 
 1. Open the project in Unity 6
 2. Ensure Photon Fusion 2 SDK is imported
 3. Add your Photon App ID to `Assets/Fusion/Resources/NetworkProjectConfig`
-4. Open `Assets/Scenes/GameScene`
+4. Open `Assets/Scenes/MainScene`
 5. Press Play
 
 \---
