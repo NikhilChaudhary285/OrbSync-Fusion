@@ -14,7 +14,7 @@ public class DebugHUD : MonoBehaviour
         var runner = NetworkManager.Runner;
         if (runner == null) return;
 
-        _style ??= new GUIStyle(GUI.skin.label) { fontSize = 14 };
+        _style ??= new GUIStyle(GUI.skin.label) { fontSize = 32 };
 
         var ps = PlayerStateManager.Instance;
         var rm = RejoinManager.Instance;
@@ -27,6 +27,6 @@ public class DebugHUD : MonoBehaviour
                       $"My Score: {(ps != null ? ps.GetScore(runner.LocalPlayer).ToString() : "?")}\n" +
                       $"Tick: {runner.Tick}";
 
-        GUI.Label(new Rect(10, 10, 300, 200), info, _style);
+        GUI.Label(new Rect(10, 10, 600, 400), info, _style);
     }
 }
