@@ -2,8 +2,20 @@
 using Fusion;
 
 /// <summary>
-/// Thin NetworkBehaviour whose sole job is to carry RPCs for the OrbManager.
-/// Must be a NetworkObject in the scene (not spawned at runtime).
+/// Carries all orb RPCs. Two-phase pattern for race-safe collection:
+///
+/// PHASE 1 — client → host:   RPC_RequestCollect   (StateAuthority target only)
+/// PHASE 2 — host  → all:     RPC_ConfirmCollect   (All target)
+///
+/// Why two phases?
+/// If we send directly to All, each client validates independently.
+/// Network jitter means Client A sees A's RPC first; Client B sees B's RPC first.
+/// Both pass validation → both get score.
+///
+/// With two phases, the host is the ONLY validator.
+/// It processes requests in strict tick order. First arrival wins, period.
+/// Then one authoritative ConfirmCollect goes to everyone — all clients
+/// execute identical logic with identical data → guaranteed consistency.
 /// </summary>
 public class OrbRpcRelay : NetworkBehaviour
 {
@@ -15,34 +27,71 @@ public class OrbRpcRelay : NetworkBehaviour
         Instance = this;
     }
 
+    // ── Orb spawn (host → all) ────────────────────────────────────────────
+
     /// <summary>
-    /// Host calls this → all clients (including host) receive it.
-    /// RpcSources.StateAuthority = only the host can send this.
-    /// RpcTargets.All = every client receives it.
+    /// Host spawns an orb → all clients create the visual.
+    /// RpcSources.StateAuthority = only the master client can call this.
     /// </summary>
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
     public void RPC_SpawnOrb(int orbId, Vector3 position)
     {
-        if (GameManager.Instance == null || GameManager.Instance.OrbManager == null)
+        if (GameManager.Instance?.OrbManager == null)
         {
-            Debug.LogWarning("[OrbRpcRelay] Received RPC before systems ready — queuing not implemented");
+            Debug.LogWarning("[OrbRpcRelay] RPC_SpawnOrb received before OrbManager ready");
             return;
         }
-        // The OrbManager guard handles duplicates — but log for debugging
-        Debug.Log($"[OrbRpcRelay] Received spawn RPC for orb {orbId}");
+        Debug.Log($"[OrbRpcRelay] RPC_SpawnOrb received — orb {orbId}");
         GameManager.Instance.OrbManager.OnOrbSpawnReceived(orbId, position);
     }
 
+    // ── PHASE 1: Client requests collection from host only ────────────────
+
     /// <summary>
-    /// Any player can claim an orb — but the server validates it first.
-    /// RpcSources.InputAuthority = the player who owns this object sends it.
+    /// Any client clicks an orb → sends this to the HOST ONLY.
+    /// RpcSources.All         = any client can send this.
+    /// RpcTargets.StateAuthority = ONLY the host receives and processes it.
     ///
-    /// NOTE: For collect, we use a PlayerNetworkBehaviour approach instead.
-    /// See OrbCollectRpc below.
+    /// This is the key fix: validation happens in ONE place (host), not on
+    /// every client independently.
     /// </summary>
-    [Rpc(RpcSources.All, RpcTargets.All)]
-    public void RPC_CollectOrb(int orbId, PlayerRef collector)
+    [Rpc(RpcSources.All, RpcTargets.StateAuthority)]
+    public void RPC_RequestCollect(int orbId, PlayerRef requestingPlayer)
     {
-        GameManager.Instance.OrbManager.OnOrbCollectReceived(orbId, collector);
+        Debug.Log($"[OrbRpcRelay] RPC_RequestCollect — orb {orbId} requested by {requestingPlayer}");
+
+        // Host validates: is this orb still available?
+        bool approved = GameManager.Instance.OrbManager.TryClaimOnHost(orbId, requestingPlayer);
+
+        if (approved)
+        {
+            // Host approves → broadcast confirm to ALL clients
+            RPC_ConfirmCollect(orbId, requestingPlayer);
+            Debug.Log($"[OrbRpcRelay] Approved — broadcasting RPC_ConfirmCollect for orb {orbId}");
+        }
+        else
+        {
+            // Rejected — orb was already claimed by someone else
+            Debug.Log($"[OrbRpcRelay] REJECTED — orb {orbId} already claimed, ignoring {requestingPlayer}");
+        }
+    }
+
+    // ── PHASE 2: Host confirms collection to all clients ──────────────────
+
+    /// <summary>
+    /// Host sends this after approving a collect request.
+    /// RpcSources.StateAuthority = only the host sends this (called from RPC_RequestCollect above).
+    /// RpcTargets.All            = every client receives and executes this.
+    ///
+    /// Because this comes from one authority with one winner, all clients
+    /// execute identical logic → no inconsistency possible.
+    /// </summary>
+    [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
+    public void RPC_ConfirmCollect(int orbId, PlayerRef winner)
+    {
+        Debug.Log($"[OrbRpcRelay] RPC_ConfirmCollect — orb {orbId} won by {winner}");
+
+        if (GameManager.Instance?.OrbManager == null) return;
+        GameManager.Instance.OrbManager.OnOrbCollectConfirmed(orbId, winner);
     }
 }

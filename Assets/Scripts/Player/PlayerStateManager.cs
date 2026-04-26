@@ -47,7 +47,7 @@ public class PlayerStateManager : MonoBehaviour
             return;
         }
 
-        Vector3 spawnPos = GetNextSpawnPoint();
+        Vector3 spawnPos = GetNextSpawnPoint(player); // pass player ref
         Debug.Log($"[PlayerStateManager] Spawning player {player} at {spawnPos}");
 
         // In Shared Mode: pass player as the InputAuthority
@@ -123,13 +123,19 @@ public class PlayerStateManager : MonoBehaviour
         Debug.Log($"[PlayerStateManager] Saved and unregistered player {player}");
     }
 
-    private Vector3 GetNextSpawnPoint()
+    private Vector3 GetNextSpawnPoint(PlayerRef player)
     {
         if (spawnPoints == null || spawnPoints.Length == 0)
-            return new Vector3(UnityEngine.Random.Range(-5f, 5f), 0.5f, UnityEngine.Random.Range(-5f, 5f));
+            return new Vector3(Random.Range(-5f, 5f), 0.5f, Random.Range(-5f, 5f));
 
-        var pt = spawnPoints[_spawnIndex % spawnPoints.Length];
-        _spawnIndex++;
-        return pt != null ? pt.position : Vector3.zero + Vector3.up * 0.5f;
+        // Use player's raw ID to pick spawn point deterministically
+        // Player:1 → index 0, Player:2 → index 1, etc.
+        // This is consistent across all clients without needing sync
+        int index = (player.RawEncoded - 1) % spawnPoints.Length;
+        index = Mathf.Abs(index); // Safety: ensure non-negative
+
+        var pt = spawnPoints[index];
+        Debug.Log($"[PlayerStateManager] Player {player} → spawn index {index}");
+        return pt != null ? pt.position : Vector3.up * 0.5f;
     }
 }
