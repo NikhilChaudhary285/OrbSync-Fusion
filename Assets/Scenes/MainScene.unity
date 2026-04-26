@@ -753,6 +753,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2b68f6f33d696e04190191744a0173d5, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  rejoinWindowSeconds: 30
 --- !u!1 &1563359925
 GameObject:
   m_ObjectHideFlags: 0
@@ -848,8 +849,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b4f29a28ced8a33438e1cf381d963e21, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  runnerPrefab: {fileID: 0}
-  playerPrefab: {fileID: 0}
+  playerPrefab: {fileID: 552713394988290059, guid: 559824493729a894e9417717e083c8ac,
+    type: 3}
 --- !u!1 &1827905727
 GameObject:
   m_ObjectHideFlags: 0

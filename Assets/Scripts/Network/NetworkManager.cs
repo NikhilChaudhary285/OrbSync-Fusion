@@ -1,89 +1,109 @@
-﻿using System;
+﻿// Assets/Scripts/Network/NetworkManager.cs
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using Fusion;
 using Fusion.Sockets;
 
-/// <summary>
-/// Handles starting Fusion, joining/creating rooms, and player connect/disconnect events.
-/// This is the entry point for all networking.
-/// </summary>
 public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
 {
     [Header("References")]
-    [SerializeField] private NetworkRunner runnerPrefab;
-    [SerializeField] private NetworkObject playerPrefab;
+    [SerializeField] private NetworkObject playerPrefab; // Assign in Inspector
 
-    // The active runner — one per client
     public static NetworkRunner Runner { get; private set; }
 
-    // Called by GameManager on start
+    // ── Startup ───────────────────────────────────────────────────────────
+
     public async void StartGame(string roomName)
     {
-        // Create the NetworkRunner at runtime (not in scene)
         var runnerGO = new GameObject("NetworkRunner");
-        Runner = runnerGO.AddComponent<NetworkRunner>();
-        Runner.ProvideInput = true; // This client will send input
+        DontDestroyOnLoad(runnerGO); // Keep runner alive across scenes
 
-        // Start or join a room
+        Runner = runnerGO.AddComponent<NetworkRunner>();
+        Runner.ProvideInput = true;
+
+        // IMPORTANT: Add THIS monobehaviour as the callback listener
+        Runner.AddCallbacks(this);
+
         var result = await Runner.StartGame(new StartGameArgs
         {
-            GameMode = GameMode.Shared,          // Shared Mode - no dedicated server
-            SessionName = roomName,                 // Room name players use to join
-            Scene = SceneRef.FromIndex(0),    // Load scene index 0 (your MainScene)
-            SceneManager = gameObject.AddComponent<NetworkSceneManagerDefault>(),
-            PlayerCount = 4                        // Max 4 players
+            GameMode = GameMode.Shared,
+            SessionName = roomName,
+            Scene = SceneRef.FromIndex(0),
+            SceneManager = runnerGO.AddComponent<NetworkSceneManagerDefault>(),
+            PlayerCount = 4
         });
 
         if (result.Ok)
-        {
             Debug.Log($"[NetworkManager] Joined room: {roomName}");
-        }
         else
-        {
-            Debug.LogError($"[NetworkManager] Failed to start: {result.ShutdownReason}");
-        }
+            Debug.LogError($"[NetworkManager] Failed: {result.ShutdownReason}");
     }
 
-    // ─── INetworkRunnerCallbacks ───────────────────────────────────────────
+    // ── Callbacks ─────────────────────────────────────────────────────────
 
     public void OnPlayerJoined(NetworkRunner runner, PlayerRef player)
     {
-        Debug.Log($"[NetworkManager] Player joined: {player}");
+        Debug.Log($"[NetworkManager] OnPlayerJoined fired. player={player}, localPlayer={runner.LocalPlayer}");
 
-        // Only the host (StateAuthority) spawns player objects
-        // In Shared Mode, each player spawns THEIR OWN object
         if (player == runner.LocalPlayer)
         {
-            // Ask GameManager to handle spawn + possible rejoin restore
+            // Small null guard — GameManager should always exist but be safe
+            if (GameManager.Instance == null)
+            {
+                Debug.LogError("[NetworkManager] GameManager.Instance is null during OnPlayerJoined!");
+                return;
+            }
             GameManager.Instance.OnLocalPlayerJoined(player);
         }
 
-        // Host: re-broadcast all active orbs whenever anyone joins
-        // This ensures late joiners and rejoining players see current world state
+        // Host re-syncs all orbs whenever anyone joins (handles late joiners)
         if (runner.IsSharedModeMasterClient)
         {
-            GameManager.Instance.OrbManager.SyncStateToPlayer(player);
-            Debug.Log($"[NetworkManager] Host syncing orbs to player {player}");
+            Debug.Log($"[NetworkManager] Host detected join — syncing orb state to {player}");
+            GameManager.Instance?.OrbManager?.SyncStateToPlayer(player);
         }
     }
 
     public void OnPlayerLeft(NetworkRunner runner, PlayerRef player)
     {
         Debug.Log($"[NetworkManager] Player left: {player}");
-        GameManager.Instance.OnPlayerLeft(player);
+        GameManager.Instance?.OnPlayerLeft(player);
     }
 
-    // ─── Unused callbacks (required by interface — leave empty) ───────────
+    // ── Required empty callbacks ──────────────────────────────────────────
 
-    public void OnInput(NetworkRunner runner, NetworkInput input) { }
+    public void OnInput(NetworkRunner runner, NetworkInput input)
+    {
+        // This runs ONLY on the local client, every network tick
+        // Collect raw Unity input and package it for Fusion
+        var playerInput = new PlayerInput
+        {
+            Direction = new Vector2(
+                Input.GetAxisRaw("Horizontal"),  // A/D or Left/Right
+                Input.GetAxisRaw("Vertical")     // W/S or Up/Down
+            )
+        };
+
+        // Hand it to Fusion — it will route it to the correct NetworkObject
+        input.Set(playerInput);
+    }
     public void OnInputMissing(NetworkRunner runner, PlayerRef player, NetworkInput input) { }
-    public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason) { }
-    public void OnConnectedToServer(NetworkRunner runner) { }
-    public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason) { }
+    public void OnShutdown(NetworkRunner runner, ShutdownReason shutdownReason)
+    {
+        Debug.Log($"[NetworkManager] Shutdown: {shutdownReason}");
+    }
+    public void OnConnectedToServer(NetworkRunner runner)
+    {
+        Debug.Log("[NetworkManager] Connected to server");
+    }
+    public void OnDisconnectedFromServer(NetworkRunner runner, NetDisconnectReason reason)
+    {
+        Debug.Log($"[NetworkManager] Disconnected: {reason}");
+    }
     public void OnConnectRequest(NetworkRunner runner, NetworkRunnerCallbackArgs.ConnectRequest request, byte[] token) { }
     public void OnConnectFailed(NetworkRunner runner, NetAddress remoteAddress, NetConnectFailedReason reason) { }
-    public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message) { }
+    public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessage message) { }
     public void OnSessionListUpdated(NetworkRunner runner, List<SessionInfo> sessionList) { }
     public void OnCustomAuthenticationResponse(NetworkRunner runner, Dictionary<string, object> data) { }
     public void OnHostMigration(NetworkRunner runner, HostMigrationToken hostMigrationToken) { }
@@ -93,4 +113,5 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
     public void OnSceneLoadStart(NetworkRunner runner) { }
     public void OnObjectExitAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
     public void OnObjectEnterAOI(NetworkRunner runner, NetworkObject obj, PlayerRef player) { }
+    public void OnUserSimulationMessage(NetworkRunner runner, SimulationMessagePtr message) { }
 }

@@ -32,8 +32,16 @@ public class GameManager : MonoBehaviour
 
     private void Start()
     {
+        // Verify all references before starting
+        Debug.Log($"[GameManager] NetworkManager: {NetworkManager != null}");
+        Debug.Log($"[GameManager] OrbManager: {OrbManager != null}");
+        Debug.Log($"[GameManager] PlayerStateManager: {PlayerStateManager != null}");
+        Debug.Log($"[GameManager] RejoinManager: {RejoinManager != null}");
+        Debug.Log($"[GameManager] PlayerPrefab: {PlayerStateManager?.playerPrefab != null}");
+
         // Start networking immediately when game launches
         NetworkManager.StartGame(defaultRoomName);
+
         // OrbManager.Initialize is called from OnLocalPlayerJoined 
         // after runner is confirmed connected
     }
@@ -62,8 +70,8 @@ public class GameManager : MonoBehaviour
 
         // NOTE: Orb state sync for late joiners is handled differently.
         // In Shared Mode, the host will broadcast active orbs via RPC on join.
-        // See OrbManager.SyncStateToPlayer — call this from the host side.
-        
+        // See OrbManager.SyncStateToPlayer — call this from the host side - In NetworkManager.cs - OnPlayerJoined() Method
+
     }
 
     /// <summary>
