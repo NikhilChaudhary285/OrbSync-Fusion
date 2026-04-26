@@ -59,7 +59,8 @@ public class NetworkManager : MonoBehaviour, INetworkRunnerCallbacks
             GameManager.Instance.OnLocalPlayerJoined(player);
         }
 
-        // HOST handles orb sync for new player
+        // Host: re-broadcast all active orbs whenever anyone joins
+        // This ensures late joiners and rejoining players see current world state
         if (runner.IsSharedModeMasterClient)
         {
             GameManager.Instance.OrbManager.SyncStateToPlayer(player);

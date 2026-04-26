@@ -23,6 +23,13 @@ public class OrbRpcRelay : NetworkBehaviour
     [Rpc(RpcSources.StateAuthority, RpcTargets.All)]
     public void RPC_SpawnOrb(int orbId, Vector3 position)
     {
+        if (GameManager.Instance == null || GameManager.Instance.OrbManager == null)
+        {
+            Debug.LogWarning("[OrbRpcRelay] Received RPC before systems ready — queuing not implemented");
+            return;
+        }
+        // The OrbManager guard handles duplicates — but log for debugging
+        Debug.Log($"[OrbRpcRelay] Received spawn RPC for orb {orbId}");
         GameManager.Instance.OrbManager.OnOrbSpawnReceived(orbId, position);
     }
 
